@@ -1,0 +1,118 @@
+<head>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+	<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.3.2/chart.min.js"></script>
+	<style>
+		table {
+		  font-family: arial, sans-serif;
+		  font-size:small;
+		  border-collapse: collapse;
+		  width: 100%;
+		}
+		
+		td, th {
+		  border: 1px solid #dddddd;
+		  text-align: left;
+		  padding: 8px;
+		}
+		
+		tr:nth-child(even) {
+		  background-color: #dddddd;
+		}
+		</style>
+</head>
+<body>
+	<a href="http://127.0.0.1:3000/test?dow=1">Monday</a> 
+	<a href="http://127.0.0.1:3000/test?dow=2">Tuesday</a> 
+	<a href="http://127.0.0.1:3000/test?dow=3">Wednesday</a> 
+	<a href="http://127.0.0.1:3000/test?dow=4">Thursday</a>
+	<a href="http://127.0.0.1:3000/test?dow=5">Friday</a>
+	 <a href="http://127.0.0.1:3000/test?dow=6">Saturday</a> 
+	 <a href="http://127.0.0.1:3000/test?dow=0">Sunday</a>
+	<div style="display:flex-auto;">
+	<div id='Indicator' style="display:inline-block;"><!-- Plotly chart will be drawn inside this DIV --></div>
+	<div id='Histogram' style="display:inline-block;"><!-- Plotly chart will be drawn inside this DIV --></div>
+<div id='Timeseries' style="display:inline-block;"><!-- Plotly chart will be drawn inside this DIV --></div>
+<div id="tabledata" style="display:inline-block;"><h2>Query and Stats</h2></div></div>
+
+<button>TEST</button>
+</body>
+<script>
+	const queryString = window.location.search;
+	const urlParams = new URLSearchParams(queryString)
+	console.log(queryString)
+	$.getJSON( `http://127.0.0.1:3000/data?dow=${urlParams.get('dow')}`, function( results ) {
+		var txt = ""
+		var i = 0
+		var times = []
+		var datetimes = []
+		var timeseries_data = []
+		var averagetime = 0
+		myObj = results
+		txt += "<table border='1'>"
+		for (x in myObj) {
+			txt += "<tr><td>" + myObj[x].destination_caller_id + "</td><td>" + myObj[x].text + "</td><td>" + myObj[x].h + "</td><td>" + myObj[x].dt + "</td></tr>";
+			times[i] = myObj[x].h
+			averagetime = averagetime+myObj[x].h
+			datetimes[i] = myObj[x].dt
+			var timeseries_datapoint = {
+				"x": myObj[x].dt,
+				"y": myObj[x].h
+			}
+			timeseries_data.push(timeseries_datapoint)
+			i++
+		}
+		averagetime = averagetime / i 
+		averagetime_minutes = ((averagetime/100)-Math.trunc(averagetime/100))*60
+		averagetime_hour = Math.trunc(averagetime/100)
+		averagetime_accurate = averagetime_hour*100+averagetime_minutes
+		averagetime_text = `${averagetime_hour*100}:${averagetime_minutes}`
+		txt += "</table>" 
+		document.getElementById("tabledata").innerHTML = txt;
+		console.log(timeseries_data)
+		// INDICATOR
+		var data = [{
+			type: "indicator",
+			mode: "number+delta",
+			value: averagetime_accurate,
+			number: { prefix: "" },
+			//delta: { position: "top", reference: 320 },
+			domain: { x: [0, 1], y: [0, 1] }
+		}]
+		var layout = {
+			paper_bgcolor: "lightgray",
+			width: 600,
+			height: 200,
+			margin: { t: 0, b: 0, l: 0, r: 0 }
+		}
+		Plotly.newPlot('Indicator', data, layout)
+	
+		// HISTOGRAM
+		
+		var trace = {
+			x: times,
+			type: 'histogram',
+		}
+		var data = [trace];
+		var layout = {
+			width: 600,
+			height: 200,
+			margin: { t: 0, b: 0, l: 0, r: 0 }}
+		Plotly.newPlot('Histogram', data, layout);
+		
+		// TIMESERIES
+		var trace = {
+			x: datetimes,
+			y: times,
+			type: 'scatter',
+		};
+		var data = [trace];
+		var layout = {
+			width: 600,
+			height: 200,
+			margin: { t: 0, b: 0, l: 0, r: 0 }}
+		Plotly.newPlot('Timeseries', data,layout);
+		
+		
+	})
+</script>
